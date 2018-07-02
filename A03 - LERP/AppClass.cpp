@@ -2,7 +2,7 @@
 void Application::InitVariables(void)
 {
 	//Change this to your name and email
-	m_sProgrammer = "Alberto Bobadilla - labigm@rit.edu";
+	m_sProgrammer = "Jordan Machalek - jdm4344@rit.edu";
 	
 	//Set the position and target of the camera
 	//(I'm at [0,0,10], looking at [0,0,0] and up is the positive Y axis)
@@ -23,6 +23,7 @@ void Application::InitVariables(void)
 		m_uOrbits = 7;
 
 	float fSize = 1.0f; //initial size of orbits
+	float fRadius = 0.95f; // initial orbit radius
 
 	//creating a color using the spectrum 
 	uint uColor = 650; //650 is Red
@@ -31,6 +32,7 @@ void Application::InitVariables(void)
 	/*
 		This part will create the orbits, it start at 3 because that is the minimum subdivisions a torus can have
 	*/
+
 	uint uSides = 3; //start with the minimal 3 sides
 	for (uint i = uSides; i < m_uOrbits + uSides; i++)
 	{
@@ -38,6 +40,26 @@ void Application::InitVariables(void)
 		m_shapeList.push_back(m_pMeshMngr->GenerateTorus(fSize, fSize - 0.1f, 3, i, v3Color)); //generate a custom torus and add it to the meshmanager
 		fSize += 0.5f; //increment the size for the next orbit
 		uColor -= static_cast<uint>(decrements); //decrease the wavelength
+
+		#pragma region Coordinates
+		// Get stop coordinates
+		std::vector<vector3> points; // points for current shape
+
+		for (int k = 0; k < i; k++)
+		{
+			// Get current angle
+			float angle = k * (2.0f * 3.14f / i);
+
+			// Get coordinates of vertices - radius * sin or cos
+			float y = (fSize - 0.5f) * std::sin(angle); //(fSize - 0.05f) for center of inner and outer radius
+			float x = (fSize - 0.5f) * std::cos(angle);
+
+			points.push_back(vector3(x, y, 0));
+		}
+		// Save to stopList
+		stopList.push_back(points);
+		routeNums.push_back(0);
+		#pragma endregion
 	}
 }
 void Application::Update(void)
@@ -62,19 +84,59 @@ void Application::Display(void)
 	/*
 		The following offset will orient the orbits as in the demo, start without it to make your life easier.
 	*/
-	//m4Offset = glm::rotate(IDENTITY_M4, 1.5708f, AXIS_Z);
+	m4Offset = glm::rotate(IDENTITY_M4, 1.5708f, AXIS_Z);
 
 	// draw a shapes
 	for (uint i = 0; i < m_uOrbits; ++i)
 	{
-		m_pMeshMngr->AddMeshToRenderList(m_shapeList[i], glm::rotate(m4Offset, 1.5708f, AXIS_X));
+		m_pMeshMngr->AddMeshToRenderList(m_shapeList[i], glm::rotate(m4Offset, 1.5708f, AXIS_X)); //toruses
 
 		//calculate the current position
-		vector3 v3CurrentPos = ZERO_V3;
-		matrix4 m4Model = glm::translate(m4Offset, v3CurrentPos);
+		//vector3 v3CurrentPos = ZERO_V3;
+		//matrix4 m4Model = glm::translate(m4Offset, v3CurrentPos);
 
-		//draw spheres
-		m_pMeshMngr->AddSphereToRenderList(m4Model * glm::scale(vector3(0.1)), C_WHITE);
+		#pragma region Movement
+		// Make timer for movement
+		static float timer = 0;
+		static uint clock = m_pSystem->GenClock();
+		timer += m_pSystem->GetDeltaTime(clock);
+
+		for (int k = 0; k < m_uOrbits; k++)
+		{
+			// Get current list of positions
+			std::vector<vector3> currentRoute = stopList[k];
+
+			vector3 startPos;
+			vector3 endPos;
+			static uint route = 0;
+			startPos = currentRoute[route];
+			//startPos = currentRoute[routeNums[i]];
+
+			endPos = currentRoute[(route + 1) % currentRoute.size()];
+
+			// get time percentage
+			float timeDiff = 2.0f;
+			float timePercent = MapValue(timer, 0.0f, timeDiff, 0.0f, 1.0f);
+
+			// calculate the current position
+			vector3 currentPos = glm::lerp(startPos, endPos, timePercent);
+			matrix4 matModel = glm::translate(m4Offset, currentPos);
+
+			//draw sphere
+			m_pMeshMngr->AddSphereToRenderList(matModel * glm::scale(vector3(0.1)), C_WHITE); // spheres
+
+			//if we are done with this route
+			if (timePercent >= 1.0f)
+			{
+				// advance route
+				route++;
+				// Restart clock
+				timer = m_pSystem->GetDeltaTime(clock);
+				route %= currentRoute.size();
+			}
+		}
+		#pragma endregion
+
 	}
 
 	//render list call
