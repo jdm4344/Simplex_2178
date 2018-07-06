@@ -1,4 +1,7 @@
 #include "MyMesh.h"
+// Jordan Machalek
+// Section 1
+// A02
 void MyMesh::Init(void)
 {
 	m_bBinded = false;
@@ -275,13 +278,47 @@ void MyMesh::GenerateCone(float a_fRadius, float a_fHeight, int a_nSubdivisions,
 	Release();
 	Init();
 
-	// Replace this with your code
-	GenerateCube(a_fRadius * 2.0f, a_v3Color);
-	// -------------------------------
+	vector3 center = vector3(0, 0, 0); // center of base
+	vector3 pinnacle = vector3(0, 0, a_fHeight); // point of the cone
+	vector3* prevPoint = nullptr; // last point generated - to be used for 'first' point of next tri
+	vector3* points = new vector3[a_nSubdivisions + 2]; // all points generated - # of subDiv + center + pinnacle
+	points[0] = center; // assign center
+	points[1] = pinnacle; // assign pinnacle
+
+	// Generate base
+	for (int i = 0; i < a_nSubdivisions + 1; i++)
+	{
+		// Get current angle
+		float angle = i * (2.0f * 3.14f / a_nSubdivisions);
+
+		// Get coordinates of vertices
+		float x = a_fRadius * std::sin(angle);
+		float y = a_fRadius * std::cos(angle);
+
+		points[i] = vector3(x, y, 0);
+
+		// Make the new Tri
+		if (prevPoint != nullptr) // Make sure there are enough points for a full tri
+		{
+			AddTri(points[i], vector3(prevPoint->x, prevPoint->y, 0), center);
+			AddTri(points[i], pinnacle, vector3(prevPoint->x, prevPoint->y, 0));
+			delete prevPoint;
+
+			prevPoint = new vector3(x, y, 0);
+		}
+		else if (prevPoint == nullptr) // Wait to get a third point
+		{
+			prevPoint = new vector3(x, y, 0);
+		}
+	}
 
 	// Adding information about color
 	CompleteMesh(a_v3Color);
 	CompileOpenGL3X();
+
+	// Cleanup
+	delete[] points;
+	delete prevPoint;
 }
 void MyMesh::GenerateCylinder(float a_fRadius, float a_fHeight, int a_nSubdivisions, vector3 a_v3Color)
 {
@@ -299,13 +336,99 @@ void MyMesh::GenerateCylinder(float a_fRadius, float a_fHeight, int a_nSubdivisi
 	Release();
 	Init();
 
-	// Replace this with your code
-	GenerateCube(a_fRadius * 2.0f, a_v3Color);
-	// -------------------------------
+	vector3 center1 = vector3(0, 0, a_fHeight / 2); // center of end
+	vector3 center2 = vector3(0, 0, -a_fHeight / 2);
+	vector3* prevPoint1 = nullptr; // last point generated
+	vector3* prevPoint2 = nullptr;
+	vector3* points1 = new vector3[a_nSubdivisions + 1]; // all points generated for 1 end - # of subDiv + center
+	vector3* points2 = new vector3[a_nSubdivisions + 1]; 
+
+	// Generate top and bottom
+	for (size_t j = 0; j < 2; j++)
+	{
+		points1[0] = center1; // assign top center
+		points1[1] = center2; // assign bottom center 
+	
+		for (int i = 0; i < a_nSubdivisions + 1; i++)
+		{
+			// Get current angle
+			float angle = i * (2.0f * 3.14f / a_nSubdivisions);
+
+			// Get coordinates of vertices
+			float x = a_fRadius * std::sin(angle);
+			float y = a_fRadius * std::cos(angle);
+
+			if (j == 1) // top
+			{
+				points1[i] = vector3(x, y, a_fHeight / 2);
+			}
+			else // bottom
+			{
+				points2[i] = vector3(x, y, -a_fHeight / 2);
+			}
+
+			// Make the new Tri
+			if (prevPoint1 != nullptr) // Make sure there are enough points for a full tri
+			{
+				if (j == 1) // top
+				{
+					AddTri(points1[i], vector3(prevPoint1->x, prevPoint1->y, a_fHeight / 2), center1);
+					delete prevPoint1;
+					prevPoint1 = new vector3(x, y, a_fHeight / 2);
+				}
+				else // bottom
+				{
+					AddTri(vector3(prevPoint1->x, prevPoint1->y, -a_fHeight / 2), points2[i], center2); // swap prevPoint and points2[i] so face is outwards
+					delete prevPoint1;
+					prevPoint1 = new vector3(x, y, -a_fHeight / 2);
+				}
+			}
+			else if (prevPoint1 == nullptr) // Wait to get a third point
+			{
+				if (j == 1) // top
+				{
+					prevPoint1 = new vector3(x, y, a_fHeight / 2);
+				}
+				else // bottom
+				{
+					prevPoint1 = new vector3(x, y, -a_fHeight / 2);
+				}
+			}
+		}
+
+		// Cleanup
+		delete prevPoint1;
+		prevPoint1 = nullptr;
+		delete prevPoint2;
+		prevPoint2 = nullptr;
+	}
+
+	// Create sides
+	for (size_t k = 0; k < a_nSubdivisions + 1; k++)
+	{
+		if (prevPoint1 != nullptr && prevPoint2 != nullptr)
+		{
+			AddQuad(*prevPoint1, points1[k], *prevPoint2, points2[k]);
+			prevPoint1 = &points1[k];
+			prevPoint2 = &points2[k];
+		}
+		else if (prevPoint1 == nullptr || prevPoint2 == nullptr)
+		{
+			AddQuad(points1[k], points1[k + 1], points2[k], points2[k + 1]);
+			prevPoint1 = &points1[k + 1];
+			prevPoint2 = &points2[k + 1];
+		}
+	}
 
 	// Adding information about color
 	CompleteMesh(a_v3Color);
 	CompileOpenGL3X();
+
+	// Cleanup
+	delete[] points1;
+	delete[] points2;
+	//delete prevPoint1; // Deleting these causes exception - b/c points1&2 are deleted?
+	//delete prevPoint2;
 }
 void MyMesh::GenerateTube(float a_fOuterRadius, float a_fInnerRadius, float a_fHeight, int a_nSubdivisions, vector3 a_v3Color)
 {
@@ -329,13 +452,142 @@ void MyMesh::GenerateTube(float a_fOuterRadius, float a_fInnerRadius, float a_fH
 	Release();
 	Init();
 
-	// Replace this with your code
-	GenerateCube(a_fOuterRadius * 2.0f, a_v3Color);
-	// -------------------------------
+	vector3* prevInner = nullptr; // last point generated
+	vector3* prevOuter = nullptr;
+	vector3* innerTopPoints = new vector3[a_nSubdivisions + 1]; // all points generated for 1 end - # of subDiv + center
+	vector3* outerTopPoints = new vector3[a_nSubdivisions + 1];
+	vector3* innerBottomPoints = new vector3[a_nSubdivisions + 1]; // all points generated for 1 end - # of subDiv + center
+	vector3* outerBottomPoints = new vector3[a_nSubdivisions + 1];
+
+	// Generate top and bottom
+	for (size_t j = 0; j < 2; j++)
+	{
+		for (int i = 0; i < a_nSubdivisions + 1; i++)
+			{
+				// Get current angle
+				float angle = i * (2.0f * 3.14f / a_nSubdivisions);
+
+				// Get coordinates of vertices
+				float xInner = a_fInnerRadius * std::sin(angle);
+				float yInner = a_fInnerRadius * std::cos(angle);
+
+				float xOuter = a_fOuterRadius * std::sin(angle);
+				float yOuter = a_fOuterRadius * std::cos(angle);
+
+				if (j == 1) // top
+				{
+					innerTopPoints[i] = vector3(xInner, yInner, a_fHeight / 2);
+					outerTopPoints[i] = vector3(xOuter, yOuter, a_fHeight / 2);
+				}
+				else // bottom
+				{
+					innerBottomPoints[i] = vector3(xInner, yInner, -a_fHeight / 2);
+					outerBottomPoints[i] = vector3(xOuter, yOuter, -a_fHeight / 2);
+				}
+
+				// Make the new Quad
+				if (prevInner != nullptr && prevOuter != nullptr) // Make sure there are enough points for a full quad
+				{
+					if (j == 1) // top
+					{\
+						AddQuad(innerTopPoints[i], outerTopPoints[i], *prevInner, *prevOuter);
+						delete prevInner;
+						delete prevOuter;
+						prevInner = new vector3(xInner, yInner, a_fHeight / 2);
+						prevOuter = new vector3(xOuter, yOuter, a_fHeight / 2);
+					}
+					else // bottom
+					{
+						AddQuad(*prevInner, *prevOuter, innerBottomPoints[i], outerBottomPoints[i]);
+						delete prevInner;
+						delete prevOuter;
+						prevInner = new vector3(xInner, yInner, -a_fHeight / 2);
+						prevOuter = new vector3(xOuter, yOuter, -a_fHeight / 2);
+					}
+				}
+				else if (prevInner == nullptr && prevOuter == nullptr) // Wait to get a second set of points
+				{
+					if (j == 1) // top
+					{
+						prevInner = new vector3(xInner, yInner, a_fHeight / 2);
+						prevOuter = new vector3(xOuter, yOuter, a_fHeight / 2);
+					}
+					else // bottom
+					{
+						prevInner = new vector3(xInner, yInner, -a_fHeight / 2);
+						prevOuter = new vector3(xOuter, yOuter, -a_fHeight / 2);
+					}
+				}
+		}
+		
+		// Cleanup
+		delete prevInner;
+		prevInner = nullptr;
+		delete prevOuter;
+		prevOuter = nullptr;
+	}
+
+	vector3* prevTop = nullptr;
+	vector3* prevBottom = nullptr;
+
+	// Create sides
+	for (int n = 0; n < 2; n++)
+	{
+		if (n == 1) // inner
+		{
+			for (size_t k = 0; k < a_nSubdivisions + 1; k++)
+			{
+				if (prevTop != nullptr && prevBottom != nullptr) // make sure points are assigned
+				{
+					AddQuad(*prevBottom, innerBottomPoints[k], *prevTop, innerTopPoints[k]);
+					// advance previous
+					prevTop = &innerTopPoints[k];
+					prevBottom = &innerBottomPoints[k];
+				}
+				else if (prevTop == nullptr || prevBottom == nullptr)
+				{
+					AddQuad(innerBottomPoints[k], innerTopPoints[k], innerBottomPoints[k + 1], innerTopPoints[k + 1]);
+					// set previous
+					prevTop = &innerTopPoints[k + 1];
+					prevBottom = &innerBottomPoints[k + 1];
+				}
+			}
+		}
+		else // outer
+		{
+			for (size_t k = 0; k < a_nSubdivisions + 1; k++)
+			{
+				if (prevTop != nullptr && prevBottom != nullptr) // make sure points are assigned
+				{
+					AddQuad(*prevTop, outerTopPoints[k], *prevBottom, outerBottomPoints[k]);
+					// advance previous
+					prevTop = &outerTopPoints[k];
+					prevBottom = &outerBottomPoints[k];
+				}
+				else if (prevTop == nullptr || prevBottom == nullptr)
+				{
+					AddQuad(outerTopPoints[k], outerTopPoints[k + 1], outerBottomPoints[k], outerBottomPoints[k + 1]);
+					// set previous
+					prevTop = &outerTopPoints[k + 1];
+					prevBottom = &outerBottomPoints[k + 1];
+				}
+			}
+		}
+	}
 
 	// Adding information about color
 	CompleteMesh(a_v3Color);
 	CompileOpenGL3X();
+
+	// Clean up
+	delete prevInner; 
+	delete prevOuter;
+	//delete prevTop;
+	//delete prevBottom;
+	delete[] innerTopPoints;
+	delete[] outerTopPoints;
+	delete[] innerBottomPoints;
+	delete[] outerBottomPoints;
 }
 void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSubdivisionsA, int a_nSubdivisionsB, vector3 a_v3Color)
 {
@@ -361,9 +613,43 @@ void MyMesh::GenerateTorus(float a_fOuterRadius, float a_fInnerRadius, int a_nSu
 	Release();
 	Init();
 
-	// Replace this with your code
-	GenerateCube(a_fOuterRadius * 2.0f, a_v3Color);
-	// -------------------------------
+	// a_nSubdivisionsA - horizontal rings
+	// a_nSubdivisionsB - vertical rings
+
+	// Attempted to follow explanation of point calculation for a torus given in the following forum response:
+	// https://gamedev.stackexchange.com/a/16850
+
+	vector3 center = vector3(0, 0, 0); // center of the torus
+	std::vector<std::vector<vector3>> allRingsA; // vector of vectors containing all points in a ring
+	std::vector<std::vector<vector3>> allRingsB; // vector of vectors containing all points in a ring
+	float radiusDiff = a_fOuterRadius - a_fInnerRadius; // distance between inner and outer radii
+	float increment = radiusDiff / a_nSubdivisionsA;
+
+	// Create ring of vectors between inner and outer radii
+	std::vector<vector3> centerRing;
+
+	for (int i = 0; i < a_nSubdivisionsA + 1; i++)
+	{
+		// Get current angle
+		float angle = i * (2.0f * 3.14f / a_nSubdivisionsB);
+
+		// Get coordinates of vertices
+		float x = (a_fInnerRadius + radiusDiff) * std::sin(angle);
+		float y = (a_fInnerRadius + radiusDiff) * std::cos(angle);
+
+		centerRing.push_back(vector3(x, y, 0));
+	}
+
+	// create ring around each of the points along centerRing
+	for (int j = 0; j < a_nSubdivisionsB + 1; j++)
+	{
+		vector3 currentVector = centerRing[j];
+
+		// Get current angle
+		float angle = j * (2.0f * 3.14f / a_nSubdivisionsB);
+
+		
+	}
 
 	// Adding information about color
 	CompleteMesh(a_v3Color);
@@ -386,11 +672,221 @@ void MyMesh::GenerateSphere(float a_fRadius, int a_nSubdivisions, vector3 a_v3Co
 	Release();
 	Init();
 
-	// Replace this with your code
-	GenerateCube(a_fRadius * 2.0f, a_v3Color);
-	// -------------------------------
+	vector3* prevPoint = nullptr; // last point generated
+	vector3* currPoints = new vector3[a_nSubdivisions + 1];
+	vector3* prevPoints = new vector3[a_nSubdivisions + 1];
+	std::vector<std::vector<vector3>> points;
+	float height = -a_fRadius;
+	vector3 center = vector3(0, 0, height);
+
+	// Generate quads for latitudes
+#pragma region Attempt 3
+	/*
+
+	float hRadius = a_fRadius / a_nSubdivisions; // horizontal radius
+	float radIncrement = a_fRadius / a_nSubdivisions;
+
+	for (int i = 0; i < a_nSubdivisions; i++)
+	{
+		std::vector<vector3> ring;
+
+		// Create vertices for current ring
+		for (int j = 0; j < a_nSubdivisions + 1; j++)
+		{
+			// Get current angle
+			float angle = j * (2.0f * 3.14f / a_nSubdivisions);
+
+			// Get coordinates of vertices
+			float x = a_fRadius * std::sin(angle);
+			float y = a_fRadius * std::cos(angle);
+
+			ring.push_back(vector3(x, y, height));
+		}
+
+		points.push_back(ring);
+		
+		// increment height
+		height += (radIncrement * radIncrement);
+		// Increment or decrement the horizontal radius exponentially
+		if (height < 0) // grow hRadius until equator
+		{
+			radIncrement = (radIncrement * radIncrement);
+			hRadius += radIncrement;
+		}
+		else if (height == 0) // reset radIncrement when at equator
+		{
+			radIncrement = a_fRadius / a_nSubdivisions;
+		}
+		else if (height > 0) // shrink hRadius above equator
+		{
+			radIncrement = (radIncrement * radIncrement);
+			hRadius -= radIncrement;
+		}
+	}
+
+	std::vector<vector3> topRing;
+	std::vector<vector3> bottomRing;
+
+	for (int k = 0; k < a_nSubdivisions - 1; k++)
+	{
+		if (k < a_nSubdivisions)
+		{
+			topRing = points[k + 1];
+			bottomRing = points[k];
+		}
+		else
+		{
+			continue;
+		}
+
+		for (int n = 0; n < a_nSubdivisions; n++)
+		{
+			AddQuad(topRing[n], topRing[n + 1], bottomRing[n], bottomRing[n + 1]);
+		}
+	}
+	*/
+#pragma endregion
+
+#pragma region Attempt 2
+	float radModifier = a_fRadius / a_nSubdivisions;
+
+	for (int i = 0; i < a_nSubdivisions; i++)
+	{
+		std::vector<vector3> ring;
+
+		for (int j = 0; j < a_nSubdivisions + 1; j++)
+		{
+			// Get current angle
+			float angle = j * (2.0f * 3.14f / a_nSubdivisions);
+
+			// Get coordinates of vertices
+			float x = (a_fRadius) * std::sin(angle);
+			float y = (a_fRadius) * std::cos(angle);
+
+			ring.push_back(vector3(x, y, height));
+		}
+
+		height += a_fRadius / a_nSubdivisions; // increment height of next level
+		if (height < 0) // grow the horizontal and lateral radius
+		{
+			radModifier += a_fRadius / a_nSubdivisions;
+		}
+		else if (height > 0) // shrink the horizontal and lateral radius
+		{
+			radModifier -= a_fRadius / a_nSubdivisions;
+		}
+
+		points.push_back(ring);
+
+		if (i >= 1)
+		{
+			std::vector<vector3> bottom = points[i - 1];
+			std::vector<vector3> top = points[i];
+
+			for (int n = 0; n < a_nSubdivisions; n++)
+			{
+				AddQuad(top[n], bottom[n], top[n + 1], bottom[n + 1]);
+			}
+		}
+	}
+
+	// Create end caps
+	std::vector<vector3> ring;
+	for (int l = 0; l < 2; l++)
+	{
+		if (l == 0)
+		{
+			ring = points[0];
+		}
+		else
+		{
+			ring = points[a_nSubdivisions - 1];
+		}
+
+		for (int m = 0; m < a_nSubdivisions; m++)
+		{
+			if (l == 0)
+			{
+				AddTri( ring[m + 1], ring[m], vector3(0, 0, -a_fRadius));
+			}
+			else
+			{
+				AddTri(vector3(0, 0, a_fRadius), ring[m], ring[m + 1] );
+			}
+		}
+	}
+	
+#pragma endregion
+
+#pragma region Attempt 1
+	/*
+	for (int i = 0; i < a_nSubdivisions; i++)
+	{
+		currPoints = new vector3[a_nSubdivisions + 1];
+
+		for (int j = 0; j < a_nSubdivisions + 1; j++)
+		{
+			// Get current angle
+			float angle = j * (2.0f * 3.14f / a_nSubdivisions);
+
+			// Get coordinates of vertices
+			float x = a_fRadius * std::sin(angle);
+			float y = a_fRadius * std::cos(angle);
+
+			currPoints[j] = vector3(x, y, height);
+		}
+
+		// Generate tris for caps - top and bottom
+		if (height == -a_fRadius || height == a_fRadius)
+		{
+			for (int k = 0; k < a_nSubdivisions + 1; k++)
+			{
+				// Make the new Tri
+				if (prevPoint != nullptr) // Make sure there are enough points for a full tri
+				{
+					if (height == -a_fRadius) // Bottom
+					{
+						AddTri(currPoints[k], vector3(prevPoint->x, prevPoint->y, height), center);
+					}
+					else if(height == a_fRadius) // Top
+					{
+						AddTri(center, vector3(prevPoint->x, prevPoint->y, height), currPoints[k]);
+					}
+
+					prevPoint = &currPoints[k];
+				}
+				else if (prevPoint == nullptr) // Wait to get a third point
+				{
+					prevPoint = &currPoints[k];
+				}
+			}
+		}
+		
+		else if (i >= 1)
+		{
+			for (int n = 0; n < a_nSubdivisions; n++)
+			{
+				AddQuad(currPoints[n], prevPoints[n], currPoints[n + 1], prevPoints[n + 1]);
+			}
+		}
+
+		// After a ring is made, increment the height
+		height += a_fRadius / a_nSubdivisions;
+
+		// Copy currPoints to prevPoints
+		prevPoints = currPoints;
+		delete[] currPoints;
+		currPoints = new vector3[a_nSubdivisions + 1];
+	}
+	*/
+#pragma endregion
 
 	// Adding information about color
 	CompleteMesh(a_v3Color);
 	CompileOpenGL3X();
+
+	// Cleanup
+	//delete prevPoint;
+	delete[] currPoints;
+	//delete[] prevPoints;
 }
