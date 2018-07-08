@@ -1,4 +1,7 @@
 // Include standard headers
+// Jordan Machalek
+// Section 1
+// E09
 #include "Main.h"
 int main(void)
 {

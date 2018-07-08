@@ -1,9 +1,12 @@
 #include "AppClass.h"
 using namespace Simplex;
+// Jordan Machalek
+// Section 1
+// E09
 void Application::InitVariables(void)
 {
 	//Change this to your name and email
-	m_sProgrammer = "Alberto Bobadilla - labigm@rit.edu";
+	m_sProgrammer = "Jordan Machalek - jdm4344@rit.edu";
 
 	//Set the position and target of the camera
 	//(I'm at [0,0,10], looking at [0,0,0] and up is the positive Y axis)
@@ -52,23 +55,32 @@ void Application::Display(void)
 	case 1:
 		m_pCamera->ResetCamera();
 		break;
-	case 2:
+	case 2: // change perspective and position
 		m_pCamera->ResetCamera();
+		m_pCamera->SetPerspective(false);
+		m_pCamera->SetPosition(vector3(0.0f, 0.0f, 15.0f));
 		break;
-	case 3:
+	case 3: // move and rotate
 		m_pCamera->ResetCamera();
+		m_pCamera->SetPositionTargetAndUp(vector3(23.0f, 0.0f, 0.0f), vector3(0.0f, 0.0f, 0.0f), vector3(1.0f, 0.0f, -1.0f));
 		break;
-	case 4:
+	case 4: // change position and therefore direction
 		m_pCamera->ResetCamera();
+		m_pCamera->SetPositionTargetAndUp(vector3(0.0f, 0.0f, -15.0f), vector3(0.0f, 0.0f, 0.0f), vector3(0.0f, 1.0f, 0.0f));
 		break;
-	case 5:
+	case 5: // change near/far with previous change
 		m_pCamera->ResetCamera();
+		m_pCamera->SetNearFar(vector2(8.0f, 100.0f));
+		m_pCamera->SetPositionTargetAndUp(vector3(0.0f, 0.0f, -15.0f), vector3(0.0f, 0.0f, 0.0f), vector3(0.0f, 1.0f, 0.0f));
 		break;
-	case 6:
+	case 6: // different near/far modification
 		m_pCamera->ResetCamera();
+		m_pCamera->SetNearFar(vector2(1.0f, 10.0f));
+		m_pCamera->SetPositionTargetAndUp(vector3(0.0f, 0.0f, -15.0f), vector3(0.0f, 0.0f, 0.0f), vector3(0.0f, 1.0f, 0.0f));
 		break;
-	case 7:
+	case 7: // change up direction
 		m_pCamera->ResetCamera();
+		m_pCamera->SetUp(vector3(0.0f, -1.0f, 0.0f));
 		break;
 	}
 
