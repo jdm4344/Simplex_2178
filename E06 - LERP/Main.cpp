@@ -1,6 +1,8 @@
 // Include standard headers
 #include "Main.h"
-
+// Jordan Machalek
+// Section 1
+// E06
 int main(void)
 {
 	Application* pApp = new Application();

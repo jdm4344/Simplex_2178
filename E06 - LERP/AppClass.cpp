@@ -1,8 +1,11 @@
 #include "AppClass.h"
+// Jordan Machalek
+// Section 1
+// E06
 void Application::InitVariables(void)
 {
 	//Change this to your name and email
-	m_sProgrammer = "Alberto Bobadilla - labigm@rit.edu";
+	m_sProgrammer = "Jordan Machalek - jdm4344@rit.edu";
 
 	//Set the position and target of the camera
 	m_pCameraMngr->SetPositionTargetAndUp(vector3(5.0f,3.0f,15.0f), ZERO_V3, AXIS_Y);
@@ -52,18 +55,25 @@ void Application::Display(void)
 	fTimer += m_pSystem->GetDeltaTime(uClock); //get the delta time for that timer
 
 	//calculate the current position
-	vector3 v3CurrentPos;
+	static vector3 v3CurrentPos = m_stopsList[0];
+	static uint posIndex = 0;
 	
-
-
-
-
-	//your code goes here
-	v3CurrentPos = vector3(0.0f, 0.0f, 0.0f);
-	//-------------------
+	// Get percentage to lerp according to
+	float percentage = static_cast<float>(MapValue(fTimer, 0.0f, 5.0f, 0.0f, 1.0f));
 	
+	// Lerp between current position and the next stop
+	v3CurrentPos = glm::lerp(v3CurrentPos, m_stopsList[posIndex], percentage);
 
+	if (percentage > 0.2f) // increment position index and reset timer
+	{
+		posIndex++;
+		fTimer = 0;
 
+		if (posIndex >= m_stopsList.size()) // reset index
+		{
+			posIndex = 0;
+		}
+	}
 	
 	matrix4 m4Model = glm::translate(v3CurrentPos);
 	m_pModel->SetModelMatrix(m4Model);
@@ -74,7 +84,7 @@ void Application::Display(void)
 	// Draw stops
 	for (uint i = 0; i < m_stopsList.size(); ++i)
 	{
-		m_pMeshMngr->AddSphereToRenderList(glm::translate(m_stopsList[i]) * glm::scale(vector3(0.05f)), C_GREEN, RENDER_WIRE);
+		m_pMeshMngr->AddSphereToRenderList(glm::translate(m_stopsList[i]) * glm::scale(vector3(0.1f)), C_GREEN, RENDER_WIRE);
 	}
 	
 	// draw a skybox
