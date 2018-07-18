@@ -1,5 +1,8 @@
 #include "AppClass.h"
 using namespace Simplex;
+// Jordan Machalek
+// Section 1
+// HW4
 //Mouse
 void Application::ProcessMouseMovement(sf::Event a_event)
 {
@@ -368,7 +371,11 @@ void Application::CameraRotation(float a_fSpeed)
 		fDeltaMouse = static_cast<float>(MouseY - CenterY);
 		fAngleX += fDeltaMouse * a_fSpeed;
 	}
+
 	//Change the Yaw and the Pitch of the camera
+	m_pCamera->ChangeYaw(fAngleY);
+	m_pCamera->ChangePitch(-fAngleX);
+
 	SetCursorPos(CenterX, CenterY);//Position the mouse in the center
 }
 //Keyboard
@@ -385,6 +392,28 @@ void Application::ProcessKeyboard(void)
 
 	if (fMultiplier)
 		fSpeed *= 5.0f;
+
+	// Check for input
+	// direction of movement should be relative to camera view, not world space
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) // forward
+	{
+		m_pCamera->MoveForward(fSpeed);
+	}
+
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) // backward
+	{
+		m_pCamera->MoveForward(-fSpeed);
+	}
+
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) // left
+	{
+		m_pCamera->MoveLateral(-fSpeed);
+	}
+
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) // right
+	{
+		m_pCamera->MoveLateral(fSpeed);
+	}
 #pragma endregion
 }
 //Joystick

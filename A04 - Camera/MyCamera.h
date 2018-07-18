@@ -28,6 +28,14 @@ class MyCamera
 
 	matrix4 m_m4View; //View matrix
 	matrix4 m_m4Projection; //Projection Matrix
+
+	// Orientation variables
+	vector3 forward = vector3(0.0f, 0.0f, -1.0f);
+	vector3 right = vector3(1.0f, 0.0f, 0.0f);
+	vector3 up = vector3(0.0f, 1.0f, 0.0f);
+	// Rotation variables
+	vector3 rotationVector = vector3(0.0f, 0.0f, 0.0f);
+	bool m_bFPC = false;
 public:
 	/*
 	USAGE: Constructor
@@ -211,6 +219,13 @@ public:
 	OUTPUT: ---
 	*/
 	void CalculateProjectionMatrix(void);
+
+	// Camera movement
+	void MoveForward(float magnitude);
+	void MoveLateral(float magnitude);
+	void ChangePitch(float angle);
+	void ChangeYaw(float angle);
+	void ChangeRoll(float angle);
 };
 
 } //namespace Simplex

@@ -1,12 +1,30 @@
 #include "MyCamera.h"
 using namespace Simplex;
+// Jordan Machalek
+// Section 1
+// HW4
 
 //Accessors
 void Simplex::MyCamera::SetPosition(vector3 a_v3Position) { m_v3Position = a_v3Position; }
 
+vector3 Simplex::MyCamera::GetPosition(void)
+{
+	return m_v3Position;
+}
+
 void Simplex::MyCamera::SetTarget(vector3 a_v3Target) { m_v3Target = a_v3Target; }
 
+vector3 Simplex::MyCamera::GetTarget(void)
+{
+	return m_v3Target;
+}
+
 void Simplex::MyCamera::SetUp(vector3 a_v3Up) { m_v3Above = a_v3Up; }
+
+vector3 Simplex::MyCamera::GetUp(void)
+{
+	return m_v3Above;
+}
 
 void Simplex::MyCamera::SetPerspective(bool a_bPerspective) { m_bPerspective = a_bPerspective; }
 
@@ -72,6 +90,7 @@ void Simplex::MyCamera::Init(void)
 	ResetCamera();
 	CalculateProjectionMatrix();
 	CalculateViewMatrix();
+	m_bFPC = true;
 	//No pointers to initialize here
 }
 
@@ -135,6 +154,34 @@ void Simplex::MyCamera::SetPositionTargetAndUp(vector3 a_v3Position, vector3 a_v
 
 void Simplex::MyCamera::CalculateViewMatrix(void)
 {
+	// Recalculate forward and right
+	forward = glm::normalize(m_v3Target - m_v3Position);
+	right = glm::cross(forward, up);
+
+	// Calculate rotation values
+	quaternion pitch = glm::angleAxis(rotationVector.x, right);
+	quaternion yaw = glm::angleAxis(rotationVector.y, up);
+	quaternion roll = glm::angleAxis(rotationVector.z, forward);
+
+	quaternion product = glm::cross(pitch, yaw);
+	forward = glm::rotate(product, forward);
+
+	if (m_bFPC == false) // Should all axes be adjusted?
+	{
+		product = glm::cross(roll, pitch);
+		up = glm::rotate(product, up);
+
+		product = glm::cross(yaw, roll);
+		right = glm::rotate(product, right);
+	}
+
+	// Adjust orientation vectors
+	m_v3Target = m_v3Position + forward;
+	m_v3Above = m_v3Position + up;
+
+	// Slow down rotation
+	rotationVector *= 0.5f;
+
 	//Calculate the look at
 	m_m4View = glm::lookAt(m_v3Position, m_v3Target, m_v3Above);
 }
@@ -153,4 +200,47 @@ void Simplex::MyCamera::CalculateProjectionMatrix(void)
 										m_v2Vertical.x, m_v2Vertical.y, //vertical
 										m_v2NearFar.x, m_v2NearFar.y); //near and far
 	}
+}
+
+// Moves the camera in front/back direction
+void Simplex::MyCamera::MoveForward(float magnitude)
+{
+	m_v3Position += forward * magnitude;
+	m_v3Target += forward * magnitude;
+	m_v3Above += forward * magnitude;
+	
+	forward = glm::normalize(m_v3Target - m_v3Position);
+	up = glm::normalize(m_v3Above - m_v3Position);
+	right = glm::normalize(glm::cross(forward, up));
+}
+
+// Moves the camera in left/right direction
+void Simplex::MyCamera::MoveLateral(float magnitude)
+{
+	m_v3Position += right * magnitude;
+	m_v3Target += right * magnitude;
+	m_v3Above += right * magnitude;
+
+	forward = glm::normalize(m_v3Target - m_v3Position);
+	up = glm::normalize(m_v3Above - m_v3Position);
+	right = glm::normalize(glm::cross(forward, up));
+	//right = glm::normalize(glm::cross(right, forward));
+}
+
+// Increments pitch by givent amount
+void Simplex::MyCamera::ChangePitch(float angle)
+{
+	rotationVector.x += angle;
+}
+
+// Increments yaw by givent amount
+void Simplex::MyCamera::ChangeYaw(float angle)
+{
+	rotationVector.y += angle;
+}
+
+// Increments roll by givent amount
+void Simplex::MyCamera::ChangeRoll(float angle)
+{
+	rotationVector.z += angle;
 }
