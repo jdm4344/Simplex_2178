@@ -1,5 +1,8 @@
 #include "MyRigidBody.h"
 using namespace Simplex;
+// Jordan Machalek
+// Section 1
+// E10
 //Allocation
 void MyRigidBody::Init(void)
 {
@@ -84,10 +87,58 @@ void MyRigidBody::SetModelMatrix(matrix4 a_m4ModelMatrix)
 
 	m_m4ToWorld = a_m4ModelMatrix;
 	
-	//your code goes here---------------------
-	m_v3MinG = m_v3MinL;
-	m_v3MaxG = m_v3MaxL;
-	//----------------------------------------
+	std::vector<vector3> extents; // extents of the bounding box for the model
+	
+	// Save the extents
+	extents.push_back(m_v3MaxL);
+	extents.push_back(vector3(m_v3MaxL.x, m_v3MinL.y, m_v3MaxL.z));
+	extents.push_back(vector3(m_v3MaxL.x, m_v3MaxL.y, m_v3MinL.z));
+	extents.push_back(vector3(m_v3MaxL.x, m_v3MinL.y, m_v3MinL.z));
+	extents.push_back(m_v3MinL);
+	extents.push_back(vector3(m_v3MinL.x, m_v3MaxL.y, m_v3MinL.z));
+	extents.push_back(vector3(m_v3MinL.x, m_v3MinL.y, m_v3MaxL.z));
+	extents.push_back(vector3(m_v3MinL.x, m_v3MaxL.y, m_v3MaxL.z));
+
+	// Convert from local to world space
+	for (int i = 0; i < extents.size(); i++)
+	{
+		extents[i] = vector3(m_m4ToWorld * vector4(extents[i], 1.0f));
+	}
+
+	// Assign starting point for min and max to compare
+	m_v3MaxG = m_v3MinG = extents[0];
+
+	// Compare to find max and min of the model in global space
+	for (int j = 0; j < extents.size(); j++)
+	{
+		// Compare x coord
+		if (m_v3MaxG.x < extents[j].x)
+		{
+			m_v3MaxG.x = extents[j].x;
+		}
+		else if (m_v3MinG.x > extents[j].x)
+		{
+			m_v3MinG.x = extents[j].x;
+		}
+		// Compare y coord
+		if (m_v3MaxG.y < extents[j].y)
+		{
+			m_v3MaxG.y = extents[j].y;
+		}
+		else if (m_v3MinG.y > extents[j].y)
+		{
+			m_v3MinG.y = extents[j].y;
+		}
+		// Compare z coord
+		if (m_v3MaxG.z < extents[j].z)
+		{
+			m_v3MaxG.z = extents[j].z;
+		}
+		else if (m_v3MinG.z > extents[j].z)
+		{
+			m_v3MinG.z = extents[j].z;
+		}
+	}
 
 	//we calculate the distance between min and max vectors
 	m_v3ARBBSize = m_v3MaxG - m_v3MinG;
