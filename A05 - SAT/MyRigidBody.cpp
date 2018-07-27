@@ -4,7 +4,7 @@ using namespace Simplex;
 void MyRigidBody::Init(void)
 {
 	m_pMeshMngr = MeshManager::GetInstance();
-	m_bVisibleBS = false;
+	m_bVisibleBS = true;
 	m_bVisibleOBB = true;
 	m_bVisibleARBB = false;
 
@@ -238,6 +238,44 @@ bool MyRigidBody::IsColliding(MyRigidBody* const a_pOther)
 
 	if (bColliding) //they are colliding
 	{
+		/*
+		switch (SAT(a_pOther))
+		{
+		case 1: SAT_AX;
+			m_pMeshMngr->AddPlaneToRenderList(a_pOther->m_m4ToWorld - this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
+			break;
+		case 2: SAT_AY;
+			break;
+		case 3: SAT_AZ;
+			break;
+		case 4: SAT_BX;
+			break;
+		case 5: SAT_BY;
+			break;
+		case 6: SAT_BZ;
+			break;
+		case 7: SAT_AXxBX;
+			break;
+		case 8: SAT_AXxBY;
+			break;
+		case 9: SAT_AXxBZ;
+			break;
+		case 10: SAT_AYxBX;
+			break;
+		case 11: SAT_AYxBY;
+			break;
+		case 12: SAT_AYxBZ;
+			break;
+		case 13: SAT_AZxBX;
+			break;
+		case 14: SAT_AZxBY;
+			break;
+		case 15: SAT_AZxBZ;
+			break;
+		default:
+			break;
+		}*/
+
 		this->AddCollisionWith(a_pOther);
 		a_pOther->AddCollisionWith(this);
 	}
@@ -276,16 +314,111 @@ void MyRigidBody::AddToRenderList(void)
 
 uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 {
-	/*
-	Your code goes here instead of this comment;
+	float ra, rb;
+	matrix3 R, AbsR;
+	vector3 myHalf = m_v3HalfWidth;
+	vector3 otherHalf = a_pOther->m_v3HalfWidth;
+	matrix3 axes = matrix3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
-	For this method, if there is an axis that separates the two objects
-	then the return will be different than 0; 1 for any separating axis
-	is ok if you are not going for the extra credit, if you could not
-	find a separating axis you need to return 0, there is an enum in
-	Simplex that might help you [eSATResults] feel free to use it.
-	(eSATResults::SAT_NONE has a value of 0)
-	*/
+	// Determine rotation matrix of other relative to this
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			// get dot product of local position vectors
+			//R[i][j] = glm::dot(this->m_m4ToWorld[i], a_pOther->m_m4ToWorld[j]); 
+			R[i][j] = glm::dot(this->m_v3Center * axes[i], a_pOther->m_v3Center * axes[j]);
+
+		}
+	}
+
+	// Get translation vector
+	vector3 translation = a_pOther->GetCenterGlobal() - this->GetCenterGlobal();
+
+	// Bring translation to a's space
+	//translation = vector3(glm::dot(translation, (vector3)this->m_m4ToWorld[0]), glm::dot(translation, (vector3)this->m_m4ToWorld[2]), glm::dot(translation, (vector3)this->m_m4ToWorld[2]));
+	translation = vector3(glm::dot(translation, this->m_v3Center * axes[0]), glm::dot(translation, this->m_v3Center * axes[2]), glm::dot(translation, this->m_v3Center * axes[2]));
+
+	// Calculate "subexpressions"
+	for (int k = 0; k < 3; k++)
+	{
+		for (int n = 0; n < 3; n++)
+		{
+			AbsR[k][n] = AbsR[k][n] + glm::epsilon<float>();
+		}
+	}
+
+	// Test center axes - x, y, z
+	// A0, A1, A2
+	for (int i = 0; i < 3; i++)
+	{
+		ra = myHalf[i];
+		rb = otherHalf[0] * AbsR[i][0] + otherHalf[1] * AbsR[i][1] + otherHalf[2] * AbsR[i][2];
+		if (glm::abs(translation[i]) > ra + rb) return 1;
+	}
+
+	// B0, B1, B2
+	for (int i = 0; i < 3; i++)
+	{
+		ra = myHalf[0] * AbsR[0][i] + myHalf[1] * AbsR[1][i] + myHalf[2] * AbsR[2][i];
+		rb = otherHalf[i];
+		if (glm::abs(translation[0] * R[0][i] + translation[1] * R[1][i] + translation[2] * R[2][i]) > ra + rb) return 1;
+	}
+
+	// Test perpendicular axes
+#pragma region A0 x B0
+	ra = myHalf[1] * AbsR[2][0] + myHalf[2] * AbsR[1][0];
+	rb = otherHalf[1] * AbsR[0][2] + otherHalf[2] * AbsR[0][1];
+	if (glm::abs(translation[2] * R[1][0] - translation[1] * R[2][0] > ra + rb)) return 1;
+#pragma endregion
+	
+#pragma region A0 x B1
+	ra = myHalf[1] * AbsR[2][1] + myHalf[2] * AbsR[1][1];
+	rb = otherHalf[1] * AbsR[0][2] + otherHalf[2] * AbsR[0][0];
+	if (glm::abs(translation[2] * R[1][1] - translation[1] * R[2][1] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A0 x B2
+	ra = myHalf[1] * AbsR[2][2] + myHalf[2] * AbsR[1][2];
+	rb = otherHalf[0] * AbsR[0][1] + otherHalf[1] * AbsR[0][0];
+	if (glm::abs(translation[2] * R[1][2] - translation[1] * R[2][2] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A1 x B0
+	ra = myHalf[0] * AbsR[2][0] + myHalf[2] * AbsR[0][0];
+	rb = otherHalf[1] * AbsR[1][2] + otherHalf[2] * AbsR[1][1];
+	if (glm::abs(translation[0] * R[2][0] - translation[2] * R[0][0] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A1 x B1
+	ra = myHalf[0] * AbsR[2][1] + myHalf[2] * AbsR[0][1];
+	rb = otherHalf[0] * AbsR[1][2] + otherHalf[2] * AbsR[1][0];
+	if (glm::abs(translation[0] * R[2][1] - translation[2] * R[0][1] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A1 x B2
+	ra = myHalf[0] * AbsR[2][2] + myHalf[2] * AbsR[0][2];
+	rb = otherHalf[0] * AbsR[1][1] + otherHalf[1] * AbsR[1][0];
+	if (glm::abs(translation[0] * R[2][2] - translation[2] * R[0][2] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A2 x B0
+	ra = myHalf[0] * AbsR[1][0] + myHalf[1] * AbsR[0][0];
+	rb = otherHalf[1] * AbsR[2][2] + otherHalf[2] * AbsR[2][1];
+	if (glm::abs(translation[1] * R[0][0] - translation[0] * R[1][0] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A2 x B1
+	ra = myHalf[0] * AbsR[1][1] + myHalf[1] * AbsR[0][1];
+	rb = otherHalf[0] * AbsR[2][2] + otherHalf[2] * AbsR[2][0];
+	if (glm::abs(translation[1] * R[0][1] - translation[0] * R[1][1] > ra + rb)) return 1;
+#pragma endregion
+
+#pragma region A2 x B2
+	ra = myHalf[0] * AbsR[1][2] + myHalf[1] * AbsR[0][2];
+	rb = otherHalf[0] * AbsR[2][1] + otherHalf[1] * AbsR[2][0];
+	if (glm::abs(translation[1] * R[0][2] - translation[0] * R[1][2] > ra + rb)) return 1;
+#pragma endregion
 
 	//there is no axis test that separates this two objects
 	return eSATResults::SAT_NONE;
