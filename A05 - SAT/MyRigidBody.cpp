@@ -238,49 +238,62 @@ bool MyRigidBody::IsColliding(MyRigidBody* const a_pOther)
 
 	if (bColliding) //they are colliding
 	{
-		/*
-		switch (SAT(a_pOther))
-		{
-		case 1: SAT_AX;
-			m_pMeshMngr->AddPlaneToRenderList(a_pOther->m_m4ToWorld - this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
-			break;
-		case 2: SAT_AY;
-			break;
-		case 3: SAT_AZ;
-			break;
-		case 4: SAT_BX;
-			break;
-		case 5: SAT_BY;
-			break;
-		case 6: SAT_BZ;
-			break;
-		case 7: SAT_AXxBX;
-			break;
-		case 8: SAT_AXxBY;
-			break;
-		case 9: SAT_AXxBZ;
-			break;
-		case 10: SAT_AYxBX;
-			break;
-		case 11: SAT_AYxBY;
-			break;
-		case 12: SAT_AYxBZ;
-			break;
-		case 13: SAT_AZxBX;
-			break;
-		case 14: SAT_AZxBY;
-			break;
-		case 15: SAT_AZxBZ;
-			break;
-		default:
-			break;
-		}*/
-
 		this->AddCollisionWith(a_pOther);
 		a_pOther->AddCollisionWith(this);
 	}
 	else //they are not colliding
 	{
+		switch (SAT(a_pOther))
+		{
+		case 1: SAT_AX;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld * glm::rotate(IDENTITY_M4, glm::radians(90.0f), vector3(0, 1, 0)) * glm::translate(IDENTITY_M4, vector3(0, 0, 1)), C_RED, RENDER_SOLID);
+			break;
+		case 2: SAT_AY;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_GREEN, RENDER_SOLID);
+			break;
+		case 3: SAT_AZ;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
+			break;
+		case 4: SAT_BX;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_RED, RENDER_SOLID);
+			break;
+		case 5: SAT_BY;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_GREEN, RENDER_SOLID);
+			break;
+		case 6: SAT_BZ;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
+			break;
+		case 7: SAT_AXxBX;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_RED, RENDER_SOLID);
+			break;
+		case 8: SAT_AXxBY;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_GREEN, RENDER_SOLID);
+			break;
+		case 9: SAT_AXxBZ;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
+			break;
+		case 10: SAT_AYxBX;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_RED, RENDER_SOLID);
+			break;
+		case 11: SAT_AYxBY;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_GREEN, RENDER_SOLID);
+			break;
+		case 12: SAT_AYxBZ;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
+			break;
+		case 13: SAT_AZxBX;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_RED, RENDER_SOLID);
+			break;
+		case 14: SAT_AZxBY;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_GREEN, RENDER_SOLID);
+			break;
+		case 15: SAT_AZxBZ;
+			m_pMeshMngr->AddPlaneToRenderList(this->m_m4ToWorld, C_BLUE, RENDER_SOLID);
+			break;
+		default:
+			break;
+		}
+
 		this->RemoveCollisionWith(a_pOther);
 		a_pOther->RemoveCollisionWith(this);
 	}
@@ -319,6 +332,8 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	vector3 myHalf = m_v3HalfWidth;
 	vector3 otherHalf = a_pOther->m_v3HalfWidth;
 	matrix3 axes = matrix3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	//matrix3 axes = this->m_m4ToWorld * a_pOther->m_m4ToWorld;
+	
 
 	// Determine rotation matrix of other relative to this
 	for (int i = 0; i < 3; i++)
@@ -326,8 +341,11 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 		for (int j = 0; j < 3; j++)
 		{
 			// get dot product of local position vectors
-			//R[i][j] = glm::dot(this->m_m4ToWorld[i], a_pOther->m_m4ToWorld[j]); 
-			R[i][j] = glm::dot(this->m_v3Center * axes[i], a_pOther->m_v3Center * axes[j]);
+			R[i][j] = glm::dot(this->m_m4ToWorld[i], a_pOther->m_m4ToWorld[j]); 
+			//R[i][j] = glm::dot(this->m_v3Center * axes[i], a_pOther->m_v3Center * axes[j]);
+			//R[i][j] = glm::dot(this->GetCenterGlobal() * axes[i], a_pOther->GetCenterGlobal() * axes[j]);
+			//R[i][j] = glm::dot(axes[i], axes[j]);
+			//R[i][j] = glm::dot(this->GetCenterLocal(), a_pOther->GetCenterLocal());
 
 		}
 	}
@@ -336,15 +354,17 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	vector3 translation = a_pOther->GetCenterGlobal() - this->GetCenterGlobal();
 
 	// Bring translation to a's space
-	//translation = vector3(glm::dot(translation, (vector3)this->m_m4ToWorld[0]), glm::dot(translation, (vector3)this->m_m4ToWorld[2]), glm::dot(translation, (vector3)this->m_m4ToWorld[2]));
-	translation = vector3(glm::dot(translation, this->m_v3Center * axes[0]), glm::dot(translation, this->m_v3Center * axes[2]), glm::dot(translation, this->m_v3Center * axes[2]));
+	translation = vector3(glm::dot(translation, (vector3)this->m_m4ToWorld[0]), glm::dot(translation, (vector3)this->m_m4ToWorld[1]), glm::dot(translation, (vector3)this->m_m4ToWorld[2]));
+	//translation = vector3(glm::dot(translation, this->m_v3Center * axes[0]), glm::dot(translation, this->m_v3Center * axes[2]), glm::dot(translation, this->m_v3Center * axes[2]));
+	//translation = vector3(glm::dot(translation, axes[0]), glm::dot(translation, axes[1]), glm::dot(translation, axes[2]));
 
 	// Calculate "subexpressions"
 	for (int k = 0; k < 3; k++)
 	{
 		for (int n = 0; n < 3; n++)
 		{
-			AbsR[k][n] = AbsR[k][n] + glm::epsilon<float>();
+			AbsR[k][n] = glm::abs(R[k][n]) + glm::epsilon<float>();
+			//AbsR[k][n] = AbsR[k][n] + glm::epsilon<float>();
 		}
 	}
 
@@ -354,7 +374,18 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	{
 		ra = myHalf[i];
 		rb = otherHalf[0] * AbsR[i][0] + otherHalf[1] * AbsR[i][1] + otherHalf[2] * AbsR[i][2];
-		if (glm::abs(translation[i]) > ra + rb) return 1;
+		if (glm::abs(translation[i]) > ra + rb)
+		{
+			switch (i)
+			{
+			case 0:
+				return SAT_AX;
+			case 1:
+				return SAT_AY;
+			case 2:
+				return SAT_AZ;
+			}
+		}
 	}
 
 	// B0, B1, B2
@@ -362,62 +393,73 @@ uint MyRigidBody::SAT(MyRigidBody* const a_pOther)
 	{
 		ra = myHalf[0] * AbsR[0][i] + myHalf[1] * AbsR[1][i] + myHalf[2] * AbsR[2][i];
 		rb = otherHalf[i];
-		if (glm::abs(translation[0] * R[0][i] + translation[1] * R[1][i] + translation[2] * R[2][i]) > ra + rb) return 1;
+		if (glm::abs(translation[0] * R[0][i] + translation[1] * R[1][i] + translation[2] * R[2][i]) > ra + rb)
+		{
+			switch (i)
+			{
+			case 0:
+				return SAT_BX;
+			case 1:
+				return SAT_BY;
+			case 2:
+				return SAT_BZ;
+			}
+		}
 	}
 
 	// Test perpendicular axes
 #pragma region A0 x B0
 	ra = myHalf[1] * AbsR[2][0] + myHalf[2] * AbsR[1][0];
 	rb = otherHalf[1] * AbsR[0][2] + otherHalf[2] * AbsR[0][1];
-	if (glm::abs(translation[2] * R[1][0] - translation[1] * R[2][0] > ra + rb)) return 1;
+	if (glm::abs(translation[2] * R[1][0] - translation[1] * R[2][0] > ra + rb)) return SAT_AXxBX;
 #pragma endregion
 	
 #pragma region A0 x B1
 	ra = myHalf[1] * AbsR[2][1] + myHalf[2] * AbsR[1][1];
-	rb = otherHalf[1] * AbsR[0][2] + otherHalf[2] * AbsR[0][0];
-	if (glm::abs(translation[2] * R[1][1] - translation[1] * R[2][1] > ra + rb)) return 1;
+	rb = otherHalf[0] * AbsR[0][2] + otherHalf[2] * AbsR[0][0];
+	if (glm::abs(translation[2] * R[1][1] - translation[1] * R[2][1] > ra + rb)) return SAT_AXxBY;
 #pragma endregion
 
 #pragma region A0 x B2
 	ra = myHalf[1] * AbsR[2][2] + myHalf[2] * AbsR[1][2];
 	rb = otherHalf[0] * AbsR[0][1] + otherHalf[1] * AbsR[0][0];
-	if (glm::abs(translation[2] * R[1][2] - translation[1] * R[2][2] > ra + rb)) return 1;
+	if (glm::abs(translation[2] * R[1][2] - translation[1] * R[2][2] > ra + rb)) return SAT_AXxBZ;
 #pragma endregion
 
 #pragma region A1 x B0
 	ra = myHalf[0] * AbsR[2][0] + myHalf[2] * AbsR[0][0];
 	rb = otherHalf[1] * AbsR[1][2] + otherHalf[2] * AbsR[1][1];
-	if (glm::abs(translation[0] * R[2][0] - translation[2] * R[0][0] > ra + rb)) return 1;
+	if (glm::abs(translation[0] * R[2][0] - translation[2] * R[0][0] > ra + rb)) return SAT_AYxBX;
 #pragma endregion
 
 #pragma region A1 x B1
 	ra = myHalf[0] * AbsR[2][1] + myHalf[2] * AbsR[0][1];
 	rb = otherHalf[0] * AbsR[1][2] + otherHalf[2] * AbsR[1][0];
-	if (glm::abs(translation[0] * R[2][1] - translation[2] * R[0][1] > ra + rb)) return 1;
+	if (glm::abs(translation[0] * R[2][1] - translation[2] * R[0][1] > ra + rb)) return SAT_AYxBY;
 #pragma endregion
 
 #pragma region A1 x B2
 	ra = myHalf[0] * AbsR[2][2] + myHalf[2] * AbsR[0][2];
 	rb = otherHalf[0] * AbsR[1][1] + otherHalf[1] * AbsR[1][0];
-	if (glm::abs(translation[0] * R[2][2] - translation[2] * R[0][2] > ra + rb)) return 1;
+	if (glm::abs(translation[0] * R[2][2] - translation[2] * R[0][2] > ra + rb)) return SAT_AYxBZ;
 #pragma endregion
 
 #pragma region A2 x B0
 	ra = myHalf[0] * AbsR[1][0] + myHalf[1] * AbsR[0][0];
 	rb = otherHalf[1] * AbsR[2][2] + otherHalf[2] * AbsR[2][1];
-	if (glm::abs(translation[1] * R[0][0] - translation[0] * R[1][0] > ra + rb)) return 1;
+	if (glm::abs(translation[1] * R[0][0] - translation[0] * R[1][0] > ra + rb)) return SAT_AZxBX;
 #pragma endregion
 
 #pragma region A2 x B1
 	ra = myHalf[0] * AbsR[1][1] + myHalf[1] * AbsR[0][1];
 	rb = otherHalf[0] * AbsR[2][2] + otherHalf[2] * AbsR[2][0];
-	if (glm::abs(translation[1] * R[0][1] - translation[0] * R[1][1] > ra + rb)) return 1;
+	if (glm::abs(translation[1] * R[0][1] - translation[0] * R[1][1] > ra + rb)) return SAT_AZxBY;
 #pragma endregion
 
 #pragma region A2 x B2
 	ra = myHalf[0] * AbsR[1][2] + myHalf[1] * AbsR[0][2];
 	rb = otherHalf[0] * AbsR[2][1] + otherHalf[1] * AbsR[2][0];
-	if (glm::abs(translation[1] * R[0][2] - translation[0] * R[1][2] > ra + rb)) return 1;
+	if (glm::abs(translation[1] * R[0][2] - translation[0] * R[1][2] > ra + rb)) return SAT_AZxBZ;
 #pragma endregion
 
 	//there is no axis test that separates this two objects
