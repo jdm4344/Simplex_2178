@@ -15,6 +15,9 @@ void Application::InitVariables(void)
 #else
 	uint uInstances = 1849;
 #endif
+	//Create the octant
+	root = new MyOctantV2();
+
 	int nSquare = static_cast<int>(std::sqrt(uInstances));
 	m_uObjects = nSquare * nSquare;
 	uint uIndex = -1;
@@ -27,9 +30,13 @@ void Application::InitVariables(void)
 			vector3 v3Position = vector3(glm::sphericalRand(34.0f));
 			matrix4 m4Position = glm::translate(v3Position);
 			m_pEntityMngr->SetModelMatrix(m4Position);
+			root->AddEntity(m_pEntityMngr->GetEntity(j));
 		}
 	}
 	m_uOctantLevels = 1;
+
+	
+
 	m_pEntityMngr->Update();
 }
 void Application::Update(void)

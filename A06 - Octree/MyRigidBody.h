@@ -229,6 +229,8 @@ public:
 	Output: ---
 	*/
 	void SetModelMatrix(matrix4 a_m4ModelMatrix);
+
+	vector3 GetARBBSize();
 #pragma endregion
 	/*
 	USAGE: Checks if the input is in the colliding array
